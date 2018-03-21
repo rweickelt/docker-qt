@@ -23,11 +23,11 @@ install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
 script:
-  - docker build -f $TARGET.docker -t $REPO:$COMMIT .
-  - docker run -v ${PWD}/test:/test $REPO:$COMMIT
+  - docker build -f $TARGET.docker -t docker-image .
+  - docker run -v ${PWD}/test:/test docker-image
         build --file /test/hello-world.qbs release profile:qt5
 
 after_success:
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-  - docker tag $REPO:$COMMIT $REPO:$TAG-$TARGET
+  - docker tag docker-image $REPO:$TAG-$TARGET
   - docker push $REPO
