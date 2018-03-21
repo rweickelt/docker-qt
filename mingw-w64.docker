@@ -87,7 +87,7 @@ RUN echo "QMAKE_LINK_OBJECT_MAX = 10" >> qtbase/mkspecs/win32-g++/qmake.conf \
 
 # Build Qt. Make will always exit with 2 because it expects gui enabled
 # which is not the case.
-RUN (make -j3 2>&1; exit 0) | tee build.log\
+RUN (make -j5 2>&1; exit 0) | tee build.log\
     && (make install 2>&1; exit 0) | tee -a build.log
 
 # A simple test to see if the Qt installation works

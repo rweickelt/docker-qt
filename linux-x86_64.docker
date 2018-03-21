@@ -1,0 +1,6 @@
+# ========================================
+# Qt5 with Qbs build environment for Linux
+# ========================================
+
+# At the moment, this is only an alias container
+FROM rweickelt/qbs:1.9.1-1

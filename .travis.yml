@@ -11,19 +11,25 @@ addons:
       - docker-ce
 
 env:
+  global:
+    - BASE_REPO=rweickelt/qbs
+    - BASE_TAG=1.9.1-1
+    - DEPLOY_REPO=rweickelt/qt
+
   matrix:
     - TARGET=mingw-w64
+    - TARGET=linux-x86_64
 
-before_install:
+install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-  - docker pull rweickelt/qbs:1.9.1-1
+  - docker pull $BASE_REPO:$BASE_TAG
 
 script:
-  - docker build -f mingw-w64.docker -t docker-image .
+  - docker build -f $TARGET.docker -t docker-image .
   - docker run -v ${PWD}/test:/test docker-image
         build --file /test/hello-world.qbs release profile:qt5
 
 after_success:
   - docker tag docker-image $DOCKER_USERNAME/qt
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-  - docker push rweickelt/qt:$TARGET-$TAG
+  - docker push DEPLOY_REPO:$TAG-$TARGET
