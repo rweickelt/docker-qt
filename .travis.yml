@@ -19,7 +19,7 @@ env:
     - TARGET=mingw-w64
     - TARGET=linux-x86_64
 
-install:
+before_install:
   - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 
 script:
