@@ -20,7 +20,7 @@ env:
     - TARGET=linux-x86_64
 
 before_install:
-  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
 script:
   - docker build -f $TARGET.docker -t docker-image .
