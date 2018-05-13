@@ -37,10 +37,10 @@ WORKDIR  /build
 
 RUN wget -nv --continue --tries=20 --waitretry=10 --retry-connrefused \
         --no-dns-cache --timeout 300 \
-        https://download.qt.io/official_releases/qt/5.9/5.9.4/single/qt-everywhere-opensource-src-5.9.4.tar.xz \
-    && tar xf qt-everywhere-opensource-src-5.9.4.tar.xz
+        https://download.qt.io/official_releases/qt/5.9/5.9.5/single/qt-everywhere-opensource-src-5.9.5.tar.xz \
+    && tar xf qt-everywhere-opensource-src-5.9.5.tar.xz
 
-WORKDIR /build/qt-everywhere-opensource-src-5.9.4
+WORKDIR /build/qt-everywhere-opensource-src-5.9.5
 
 RUN ./configure \
         -prefix /opt/qt5-mingw-w64 \
@@ -84,6 +84,9 @@ RUN ./configure \
 # Patch for https://bugreports.qt.io/browse/QTBUG-63659
 RUN echo "QMAKE_LINK_OBJECT_MAX = 10" >> qtbase/mkspecs/win32-g++/qmake.conf \
     && echo "QMAKE_LINK_OBJECT_SCRIPT = object_script" >> qtbase/mkspecs/win32-g++/qmake.conf
+
+# Patch for https://bugreports.qt.io/browse/QTBUG-47633
+RUN sed -i -e 's/maxCreationDepth\s=\s10/maxCreationDepth = 84728472/g' qtdeclarative/src/qml/qml/qqmlcomponent.cpp
 
 # Build Qt. Make will always exit with 2 because it expects gui enabled
 # which is not the case.
