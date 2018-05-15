@@ -1,0 +1,95 @@
+From 65491e78bf567da0e861d0ce55b3efdc0af648c9 Mon Sep 17 00:00:00 2001
+From: Richard Weickelt <richard@weickelt.de>
+Date: Tue, 15 May 2018 12:28:41 +0200
+Subject: [PATCH] Avoid false recursion detection in QQmlComponent
+
+The previous implementation erroneously triggered when calling
+beginCreate() on >= 10 different instances of QQmlComponent.
+This may happen by intention and is not necessarily a sign
+of recursion.
+
+Since beginCreate() does not invoke a potentially nested
+Qt.createComponent(), but completeCreate() does, it is better to
+modify the creationDepth counter in completeCreate(). This also leads
+to simpler code.
+
+The test, however, can remain in beginCreate().
+
+Task-number: QTBUG-47633
+Change-Id: If413a8b08421d321d6a426ec16600996cb3f6ea1
+---
+ src/qml/qml/qqmlcomponent.cpp | 17 +++--------------
+ src/qml/qml/qqmlcomponent_p.h |  3 +--
+ 2 files changed, 4 insertions(+), 16 deletions(-)
+
+diff --git a/src/qml/qml/qqmlcomponent.cpp b/src/qml/qml/qqmlcomponent.cpp
+index 4da6b79..ed0d283 100644
+--- a/src/qml/qml/qqmlcomponent.cpp
++++ b/src/qml/qml/qqmlcomponent.cpp
+@@ -844,13 +844,10 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
+ 
+     // Do not create infinite recursion in object creation
+     static const int maxCreationDepth = 10;
+-    if (++creationDepth.localData() >= maxCreationDepth) {
++    if (creationDepth.localData() >= maxCreationDepth) {
+         qWarning("QQmlComponent: Component creation is recursing - aborting");
+-        --creationDepth.localData();
+-        return 0;
++        return nullptr;
+     }
+-    Q_ASSERT(creationDepth.localData() >= 1);
+-    depthIncreased = true;
+ 
+     QQmlEnginePrivate *enginePriv = QQmlEnginePrivate::get(engine);
+ 
+@@ -874,10 +871,6 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
+         ddata->indestructible = true;
+         ddata->explicitIndestructibleSet = true;
+         ddata->rootObjectInCreation = false;
+-    } else {
+-        Q_ASSERT(creationDepth.localData() >= 1);
+-        --creationDepth.localData();
+-        depthIncreased = false;
+     }
+ 
+     return rv;
+@@ -952,14 +945,10 @@ void QQmlComponent::completeCreate()
+ void QQmlComponentPrivate::completeCreate()
+ {
+     if (state.completePending) {
++        ++creationDepth.localData();
+         QQmlEnginePrivate *ep = QQmlEnginePrivate::get(engine);
+         complete(ep, &state);
+-    }
+-
+-    if (depthIncreased) {
+-        Q_ASSERT(creationDepth.localData() >= 1);
+         --creationDepth.localData();
+-        depthIncreased = false;
+     }
+ }
+ 
+diff --git a/src/qml/qml/qqmlcomponent_p.h b/src/qml/qml/qqmlcomponent_p.h
+index 2a57f7b..c1aee6c 100644
+--- a/src/qml/qml/qqmlcomponent_p.h
++++ b/src/qml/qml/qqmlcomponent_p.h
+@@ -79,7 +79,7 @@ class Q_QML_PRIVATE_EXPORT QQmlComponentPrivate : public QObjectPrivate, public
+ 
+ public:
+     QQmlComponentPrivate()
+-        : typeData(0), progress(0.), start(-1), engine(0), creationContext(0), depthIncreased(false) {}
++        : typeData(0), progress(0.), start(-1), engine(0), creationContext(0) {}
+ 
+     void loadUrl(const QUrl &newUrl, QQmlComponent::CompilationMode mode = QQmlComponent::PreferSynchronous);
+ 
+@@ -129,7 +129,6 @@ public:
+ 
+     QQmlEngine *engine;
+     QQmlGuardedContextData creationContext;
+-    bool depthIncreased;
+ 
+     void clear();
+ 
+-- 
+2.7.4
+

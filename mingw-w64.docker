@@ -85,8 +85,9 @@ RUN ./configure \
 RUN echo "QMAKE_LINK_OBJECT_MAX = 10" >> qtbase/mkspecs/win32-g++/qmake.conf \
     && echo "QMAKE_LINK_OBJECT_SCRIPT = object_script" >> qtbase/mkspecs/win32-g++/qmake.conf
 
-# Patch for https://bugreports.qt.io/browse/QTBUG-47633
-RUN sed -i -e 's/maxCreationDepth\s=\s10/maxCreationDepth = 84728472/g' qtdeclarative/src/qml/qml/qqmlcomponent.cpp
+# Apply patches
+ADD patches /patches
+RUN cd qtdeclarative; git apply /patches/qtdeclarative/QTBUG-47633.patch
 
 # Build Qt. Make will always exit with 2 because it expects gui enabled
 # which is not the case.
