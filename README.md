@@ -12,11 +12,12 @@ The following target platforms are supported:
 - x86_64-linux (gcc 5.4.0)
 - x86_64-mingw32-w64 (mingw32 5.3.1)
 
-Containing Qt modules (Qt 5.9.4):
+Containing Qt modules (Qt 5.9.5):
 
 - qtcore
 - qtdeclarative
 - qtnetwork
+- qtserialport
 - qtxml
 
 A lot of Qt modules are missing at the moment because otherwise the build
