@@ -37,10 +37,10 @@ WORKDIR  /build
 
 RUN wget -nv --continue --tries=20 --waitretry=10 --retry-connrefused \
         --no-dns-cache --timeout 300 \
-        https://download.qt.io/official_releases/qt/5.9/5.9.5/single/qt-everywhere-opensource-src-5.9.5.tar.xz \
-    && tar xf qt-everywhere-opensource-src-5.9.5.tar.xz
+        https://download.qt.io/official_releases/qt/5.9/5.9.6/single/qt-everywhere-opensource-src-5.9.6.tar.xz \
+    && tar xf qt-everywhere-opensource-src-5.9.6.tar.xz
 
-WORKDIR /build/qt-everywhere-opensource-src-5.9.5
+WORKDIR /build/qt-everywhere-opensource-src-5.9.6
 
 RUN ./configure \
         -prefix /opt/qt5-mingw-w64 \
