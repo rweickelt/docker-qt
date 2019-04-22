@@ -24,8 +24,8 @@ before_install:
 
 script:
   - docker build -f $TARGET.docker -t docker-image .
-  - docker run -v ${PWD}/test:/test docker-image
-        build --file /test/hello-world.qbs release profile:qt5
+  - docker run -it -w /test -v ${PWD}/test:/test docker-image
+        qbs build --file /test/hello-world.qbs release profile:qt5
 
 after_success:
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
