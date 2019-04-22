@@ -81,7 +81,7 @@ RUN ./configure \
 
 # Apply patches
 ADD patches /patches
-RUN cd qtdeclarative; git apply /patches/qtdeclarative/QTBUG-47633.patch
+RUN cd qtdeclarative; git apply /patches/qtdeclarative/*.patch
 
 # Build Qt. Make will always exit with 2 because it expects gui enabled
 # which is not the case.
