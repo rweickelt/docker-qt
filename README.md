@@ -12,7 +12,7 @@ The following target platforms are supported:
 - x86_64-linux (gcc 5.4.0)
 - x86_64-mingw32-w64 (mingw32 5.3.1)
 
-Containing Qt modules (Qt 5.9.6):
+Containing Qt modules (Qt 5.9.8):
 
 - qtcore
 - qtdeclarative
