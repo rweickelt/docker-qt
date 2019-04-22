@@ -101,10 +101,39 @@ RUN /opt/qt5-linux-x86_64/bin/qmake hello-world.pro \
 
 FROM rweickelt/qbs:1.10.1
 
+#
+# Allow colored output on command line.
+#
+ENV TERM=xterm-color
+
+#
+# Make it possible to change the user in the entrypoint script.
+# The docker container usually runs as root user. This usually causes permission
+# problems on files created during build in the project directory.
+# Thus we create a user here who's UID will be changed in the entrypoint
+# script to match the UID of the current host user.
+#
+ARG USER_UID=1000
+ARG USER_NAME=devel
+RUN apt-get update && apt-get install -y gosu && \
+    groupadd -g ${USER_UID} ${USER_NAME} && \
+    useradd -s /bin/bash -u ${USER_UID} -g ${USER_NAME} -o -c "" -m ${USER_NAME}
+COPY entrypoint.sh entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
+#
+# Import qt build artifacts
+#
 COPY --from=build-environment /opt/qt5-linux-x86_64 /opt/qt5-linux-x86_64
 ENV PATH="/opt/qt5-linux-x86_64/bin:${PATH}"
 
+USER $USER_NAME
 RUN qbs setup-toolchains --detect \
     && qbs setup-qt /opt/qt5-linux-x86_64/bin/qmake qt5 \
     && qbs config defaultProfile qt5 \
     && qbs config profiles.qt5.qbs.architecture x86_64
+
+#
+# Switch back to root user for the entrypoint script.
+#
+USER root
