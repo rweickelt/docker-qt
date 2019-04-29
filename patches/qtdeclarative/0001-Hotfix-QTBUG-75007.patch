@@ -1,0 +1,110 @@
+From d156e95e16d7ed97cecf834bae12dc905be5a09f Mon Sep 17 00:00:00 2001
+From: Richard Weickelt <richard@weickelt.de>
+Date: Mon, 29 Apr 2019 17:12:40 +0200
+Subject: [PATCH 1/2] Hotfix QTBUG-75007
+
+Change-Id: I3d2417c4a0fb16a5394219f434eac0099fa123ae
+---
+ src/qml/qml/qqmlcomponent.cpp |  6 ++++++
+ src/qml/qml/qqmlmetatype.cpp  | 11 +++++++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/src/qml/qml/qqmlcomponent.cpp b/src/qml/qml/qqmlcomponent.cpp
+index 4da6b79..14ae52f 100644
+--- a/src/qml/qml/qqmlcomponent.cpp
++++ b/src/qml/qml/qqmlcomponent.cpp
+@@ -60,6 +60,8 @@
+ #include <private/qv4qobjectwrapper_p.h>
+ 
+ #include <QDir>
++#include <QMutex>
++#include <QMutexLocker>
+ #include <QStack>
+ #include <QStringList>
+ #include <QThreadStorage>
+@@ -69,6 +71,7 @@
+ 
+ namespace {
+     QThreadStorage<int> creationDepth;
++    QMutex mutex(QMutex::Recursive);
+ }
+ 
+ QT_BEGIN_NAMESPACE
+@@ -842,6 +845,8 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
+         return 0;
+     }
+ 
++    QMutexLocker lock(&mutex);
++
+     // Do not create infinite recursion in object creation
+     static const int maxCreationDepth = 10;
+     if (++creationDepth.localData() >= maxCreationDepth) {
+@@ -951,6 +956,7 @@ void QQmlComponent::completeCreate()
+ 
+ void QQmlComponentPrivate::completeCreate()
+ {
++    QMutexLocker lock(&mutex);
+     if (state.completePending) {
+         QQmlEnginePrivate *ep = QQmlEnginePrivate::get(engine);
+         complete(ep, &state);
+diff --git a/src/qml/qml/qqmlmetatype.cpp b/src/qml/qml/qqmlmetatype.cpp
+index 89f3ced..df45cf5 100644
+--- a/src/qml/qml/qqmlmetatype.cpp
++++ b/src/qml/qml/qqmlmetatype.cpp
+@@ -51,6 +51,8 @@
+ #include <QtCore/qbitarray.h>
+ #include <QtCore/qreadwritelock.h>
+ #include <QtCore/private/qmetaobject_p.h>
++#include <QtCore/QMutex>
++#include <QtCore/QMutexLocker>
+ 
+ #include <qmetatype.h>
+ #include <qobjectdefs.h>
+@@ -65,6 +67,10 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++namespace  {
++    QMutex mutex(QMutex::Recursive);
++}
++
+ struct QQmlMetaTypeData
+ {
+     QQmlMetaTypeData();
+@@ -292,21 +298,25 @@ void QQmlType::SingletonInstanceInfo::destroy(QQmlEngine *e)
+ 
+ void QQmlType::SingletonInstanceInfo::setQObjectApi(QQmlEngine *e, QObject *o)
+ {
++    QMutexLocker lock(&mutex);
+     qobjectApis.insert(e, o);
+ }
+ 
+ QObject *QQmlType::SingletonInstanceInfo::qobjectApi(QQmlEngine *e) const
+ {
++    QMutexLocker lock(&mutex);
+     return qobjectApis.value(e);
+ }
+ 
+ void QQmlType::SingletonInstanceInfo::setScriptApi(QQmlEngine *e, const QJSValue &v)
+ {
++    QMutexLocker lock(&mutex);
+     scriptApis.insert(e, v);
+ }
+ 
+ QJSValue QQmlType::SingletonInstanceInfo::scriptApi(QQmlEngine *e) const
+ {
++    QMutexLocker lock(&mutex);
+     return scriptApis.value(e);
+ }
+ 
+@@ -425,6 +435,7 @@ QQmlType::QQmlType(QQmlMetaTypeData *data, const QString &elementName, const QQm
+ QQmlType::QQmlType(QQmlMetaTypeData *data, const QString &elementName, const QQmlPrivate::RegisterType &type)
+     : d(new QQmlTypePrivate(CppType))
+ {
++    QMutexLocker lock(&mutex);
+     data->registerType(d);
+ 
+     d->elementName = elementName;
+-- 
+2.7.4
+
