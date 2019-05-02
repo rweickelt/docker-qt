@@ -4,7 +4,7 @@
 FROM rweickelt/qbs:1.10.1 as build-environment
 
 RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends \
+    && apt-get install -qq -y --no-install-recommends \
         autoconf \
         automake \
         autopoint \
@@ -13,6 +13,7 @@ RUN apt-get update -qq \
         build-essential \
         ca-certificates \
         flex \
+        git \
         intltool \
         libgdk-pixbuf2.0-dev \
         libffi-dev \
@@ -32,23 +33,22 @@ RUN apt-get update -qq \
         mingw-w64
 
 # Preapre and download cross development environment
-RUN mkdir /build
-WORKDIR  /build
+RUN mkdir -p /qt/build
 
-RUN wget -nv --continue --tries=20 --waitretry=10 --retry-connrefused \
-        --no-dns-cache --timeout 300 \
-        https://download.qt.io/official_releases/qt/5.9/5.9.8/single/qt-everywhere-opensource-src-5.9.8.tar.xz \
-    && tar xf qt-everywhere-opensource-src-5.9.8.tar.xz
+WORKDIR  /qt
+RUN git clone https://github.com/rweickelt/qt5.git -b qst-qt-5.14 --depth 1 source
 
-WORKDIR /build/qt-everywhere-opensource-src-5.9.8
+WORKDIR /qt/source
+RUN git submodule update --init -- qtbase qtdeclarative qtserialport
 
-RUN ./configure \
+WORKDIR  /qt/build
+RUN ../source/configure \
         -prefix /opt/qt5-mingw-w64 \
         -release \
         -shared \
         -opensource \
         -confirm-license \
-        -no-compile-examples \
+        -nomake examples \
         -nomake tests \
         -platform linux-g++-64 \
         -xplatform win32-g++ \
@@ -81,23 +81,15 @@ RUN ./configure \
         -skip qtwebengine \
         -skip qtwebview
 
-# Patch for https://bugreports.qt.io/browse/QTBUG-63659
-RUN echo "QMAKE_LINK_OBJECT_MAX = 10" >> qtbase/mkspecs/win32-g++/qmake.conf \
-    && echo "QMAKE_LINK_OBJECT_SCRIPT = object_script" >> qtbase/mkspecs/win32-g++/qmake.conf
-
-# Apply patches
-ADD patches /patches
-RUN cd qtdeclarative; git apply /patches/qtdeclarative/*.patch
 
 # Build Qt. Make will always exit with 2 because it expects gui enabled
 # which is not the case.
-RUN (make -j5 2>&1; exit 0) | tee build.log\
-    && (make install 2>&1; exit 0) | tee -a build.log
+RUN make -j $(nproc --all) | stdbuf -o0 tr -cd '\n' | stdbuf -o0 tr '\n' '.' && \
+    make install
 
 # A simple test to see if the Qt installation works
-WORKDIR /build
-COPY test test
-WORKDIR /build/test
+COPY test /qt/test
+WORKDIR /qt/test
 RUN /opt/qt5-mingw-w64/bin/qmake hello-world.pro \
     && make
 
@@ -134,7 +126,7 @@ COPY --from=build-environment /opt/qt5-mingw-w64 /opt/qt5-mingw-w64
 ENV PATH="/opt/qt5-mingw-w64/bin:${PATH}"
 
 RUN apt-get update -qq \
-    && apt-get install -y --no-install-recommends \
+    && apt-get install -qq -y --no-install-recommends \
         mingw-w64
 
 USER $USER_NAME

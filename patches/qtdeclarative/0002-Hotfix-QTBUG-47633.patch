@@ -1,32 +1,19 @@
-From 65491e78bf567da0e861d0ce55b3efdc0af648c9 Mon Sep 17 00:00:00 2001
+From 1f16003521c654403df2d0b4b0618641ce769c1b Mon Sep 17 00:00:00 2001
 From: Richard Weickelt <richard@weickelt.de>
-Date: Tue, 15 May 2018 12:28:41 +0200
-Subject: [PATCH] Avoid false recursion detection in QQmlComponent
+Date: Mon, 29 Apr 2019 17:14:44 +0200
+Subject: [PATCH 2/2] Hotfix QTBUG-47633
 
-The previous implementation erroneously triggered when calling
-beginCreate() on >= 10 different instances of QQmlComponent.
-This may happen by intention and is not necessarily a sign
-of recursion.
-
-Since beginCreate() does not invoke a potentially nested
-Qt.createComponent(), but completeCreate() does, it is better to
-modify the creationDepth counter in completeCreate(). This also leads
-to simpler code.
-
-The test, however, can remain in beginCreate().
-
-Task-number: QTBUG-47633
-Change-Id: If413a8b08421d321d6a426ec16600996cb3f6ea1
+Change-Id: I113200b54ab8968b192ca6468042a0cbf1ce4b2f
 ---
  src/qml/qml/qqmlcomponent.cpp | 17 +++--------------
  src/qml/qml/qqmlcomponent_p.h |  3 +--
  2 files changed, 4 insertions(+), 16 deletions(-)
 
 diff --git a/src/qml/qml/qqmlcomponent.cpp b/src/qml/qml/qqmlcomponent.cpp
-index 4da6b79..ed0d283 100644
+index 14ae52f..e2f07c6 100644
 --- a/src/qml/qml/qqmlcomponent.cpp
 +++ b/src/qml/qml/qqmlcomponent.cpp
-@@ -844,13 +844,10 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
+@@ -849,13 +849,10 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
  
      // Do not create infinite recursion in object creation
      static const int maxCreationDepth = 10;
@@ -42,7 +29,7 @@ index 4da6b79..ed0d283 100644
  
      QQmlEnginePrivate *enginePriv = QQmlEnginePrivate::get(engine);
  
-@@ -874,10 +871,6 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
+@@ -879,10 +876,6 @@ QQmlComponentPrivate::beginCreate(QQmlContextData *context)
          ddata->indestructible = true;
          ddata->explicitIndestructibleSet = true;
          ddata->rootObjectInCreation = false;
@@ -53,9 +40,9 @@ index 4da6b79..ed0d283 100644
      }
  
      return rv;
-@@ -952,14 +945,10 @@ void QQmlComponent::completeCreate()
- void QQmlComponentPrivate::completeCreate()
+@@ -958,14 +951,10 @@ void QQmlComponentPrivate::completeCreate()
  {
+     QMutexLocker lock(&mutex);
      if (state.completePending) {
 +        ++creationDepth.localData();
          QQmlEnginePrivate *ep = QQmlEnginePrivate::get(engine);
